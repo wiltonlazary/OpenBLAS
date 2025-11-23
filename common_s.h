@@ -50,6 +50,16 @@
 #define SGEMM_DIRECT_PERFORMANT    sgemm_direct_performant
 #define SGEMM_DIRECT		sgemm_direct
 #define  SGEMM_DIRECT_ALPHA_BETA		sgemm_direct_alpha_beta
+#define  SSYMM_DIRECT_ALPHA_BETA_LU		ssymm_direct_alpha_betaLU
+#define  SSYMM_DIRECT_ALPHA_BETA_LL		ssymm_direct_alpha_betaLL
+#define  STRMM_DIRECT_LNUN		strmm_direct_LNUN
+#define  STRMM_DIRECT_LNLN		strmm_direct_LNLN
+#define  STRMM_DIRECT_LTUN		strmm_direct_LTUN
+#define  STRMM_DIRECT_LTLN		strmm_direct_LTLN
+#define  SSYRK_DIRECT_ALPHA_BETA_UN         ssyrk_direct_alpha_betaUN
+#define  SSYRK_DIRECT_ALPHA_BETA_UT         ssyrk_direct_alpha_betaUT
+#define  SSYRK_DIRECT_ALPHA_BETA_LN         ssyrk_direct_alpha_betaLN
+#define  SSYRK_DIRECT_ALPHA_BETA_LT         ssyrk_direct_alpha_betaLT
 
 #define	SGEMM_ONCOPY		sgemm_oncopy
 #define	SGEMM_OTCOPY		sgemm_otcopy
@@ -220,6 +230,16 @@
 #define SGEMM_DIRECT_PERFORMANT    sgemm_direct_performant
 #define  SGEMM_DIRECT		gotoblas -> sgemm_direct
 #define  SGEMM_DIRECT_ALPHA_BETA		gotoblas -> sgemm_direct_alpha_beta
+#define  SSYMM_DIRECT_ALPHA_BETA_LU		gotoblas -> ssymm_direct_alpha_betaLU
+#define  SSYMM_DIRECT_ALPHA_BETA_LL		gotoblas -> ssymm_direct_alpha_betaLL
+#define  STRMM_DIRECT_LNUN		gotoblas -> strmm_direct_LNUN
+#define  STRMM_DIRECT_LNLN		gotoblas -> strmm_direct_LNLN
+#define  STRMM_DIRECT_LTUN		gotoblas -> strmm_direct_LTUN
+#define  STRMM_DIRECT_LTLN		gotoblas -> strmm_direct_LTLN
+#define  SSYRK_DIRECT_ALPHA_BETA_UN     gotoblas -> ssyrk_direct_alpha_betaUN
+#define  SSYRK_DIRECT_ALPHA_BETA_UT     gotoblas -> ssyrk_direct_alpha_betaUT
+#define  SSYRK_DIRECT_ALPHA_BETA_LN     gotoblas -> ssyrk_direct_alpha_betaLN
+#define  SSYRK_DIRECT_ALPHA_BETA_LT     gotoblas -> ssyrk_direct_alpha_betaLT
 #endif
 
 #define	SGEMM_ONCOPY		gotoblas -> sgemm_oncopy

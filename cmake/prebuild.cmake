@@ -99,7 +99,6 @@ if (${COMPILER_ID} STREQUAL "GNU")
 endif ()
 
 string(TOUPPER ${ARCH} UC_ARCH)
-
 file(WRITE ${TARGET_CONF_TEMP}
   "#define OS_${HOST_OS}\t1\n"
   "#define ARCH_${UC_ARCH}\t1\n"
@@ -110,6 +109,10 @@ file(WRITE ${TARGET_CONF_TEMP}
 if (${HOST_OS} STREQUAL "WINDOWSSTORE")
   file(APPEND ${TARGET_CONF_TEMP}
     "#define OS_WINNT\t1\n")
+endif ()
+if (${HOST_OS} STREQUAL CYGWIN)
+  file(APPEND ${TARGET_CONF_TEMP}
+    "#define OS_CYGWIN_NT\t1\n")
 endif ()
 
 # f_check
@@ -1310,7 +1313,7 @@ endif ()
     file(APPEND ${TARGET_CONF_TEMP}
       "#define L1_DATA_SIZE\t32768\n"
       "#define L1_DATA_LINESIZE\t64\n"
-      "#define L2_SIZE\t262144\n"
+      "#define L2_SIZE\t1048576\n"
       "#define L2_LINESIZE\t64\n"
       "#define DTB_DEFAULT_ENTRIES\t64\n"
       "#define DTB_SIZE\t4096\n"
@@ -1429,7 +1432,7 @@ endif ()
     file(APPEND ${TARGET_CONF_TEMP}
       "#define L1_DATA_SIZE 65536\n"
       "#define L1_LINESIZE 32 \n"
-      "#define L2_SIZE 262144\n"
+      "#define L2_SIZE 2097152\n"
       "#define L2_LINESIZE 32 \n"
       "#define DTB_DEFAULT_ENTRIES 128\n"
       "#define DTB_SIZE 4096\n"
@@ -1465,7 +1468,7 @@ endif ()
     file(APPEND ${TARGET_CONF_TEMP}
       "#define L1_DATA_SIZE 65536\n"
       "#define L1_DATA_LINESIZE 32\n"
-      "#define L2_SIZE 262144\n"
+      "#define L2_SIZE 2097152\n"
       "#define L2_LINESIZE 32 \n"
       "#define DTB_DEFAULT_ENTRIES 128\n"
       "#define DTB_SIZE 4096\n"

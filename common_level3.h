@@ -59,6 +59,57 @@ void sgemm_direct_alpha_beta(BLASLONG M, BLASLONG N, BLASLONG K,
 	float beta,
 	float * R, BLASLONG strideR);
 
+void ssymm_direct_alpha_betaLU(BLASLONG M, BLASLONG N,
+	float alpha,
+	float * A, BLASLONG strideA,
+	float * B, BLASLONG strideB,
+	float beta,
+	float * R, BLASLONG strideR);
+void ssymm_direct_alpha_betaLL(BLASLONG M, BLASLONG N,
+	float alpha,
+	float * A, BLASLONG strideA,
+	float * B, BLASLONG strideB,
+	float beta,
+	float * R, BLASLONG strideR);
+
+void strmm_direct_LNUN(BLASLONG M, BLASLONG N,
+	float alpha,
+	float * A, BLASLONG strideA,
+	float * B, BLASLONG strideB);
+void strmm_direct_LNLN(BLASLONG M, BLASLONG N,
+	float alpha,
+	float * A, BLASLONG strideA,
+	float * B, BLASLONG strideB);
+void strmm_direct_LTUN(BLASLONG M, BLASLONG N,
+	float alpha,
+	float * A, BLASLONG strideA,
+	float * B, BLASLONG strideB);
+void strmm_direct_LTLN(BLASLONG M, BLASLONG N,
+	float alpha,
+	float * A, BLASLONG strideA,
+	float * B, BLASLONG strideB);
+
+void ssyrk_direct_alpha_betaUN(BLASLONG N, BLASLONG K,
+	float alpha,
+	float * A, BLASLONG strideA,
+	float beta,
+	float * C, BLASLONG strideC);
+void ssyrk_direct_alpha_betaUT(BLASLONG N, BLASLONG K,
+	float alpha,
+	float * A, BLASLONG strideA,
+	float beta,
+	float * C, BLASLONG strideC);
+void ssyrk_direct_alpha_betaLN(BLASLONG N, BLASLONG K,
+	float alpha,
+	float * A, BLASLONG strideA,
+	float beta,
+	float * C, BLASLONG strideC);
+void ssyrk_direct_alpha_betaLT(BLASLONG N, BLASLONG K,
+	float alpha,
+	float * A, BLASLONG strideA,
+	float beta,
+	float * C, BLASLONG strideC);
+
 int sgemm_direct_performant(BLASLONG M, BLASLONG N, BLASLONG K);
 
 int shgemm_beta(BLASLONG, BLASLONG, BLASLONG, float,
