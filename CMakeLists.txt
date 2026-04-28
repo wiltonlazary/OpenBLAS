@@ -9,7 +9,7 @@ project(OpenBLAS C ASM)
 
 set(OpenBLAS_MAJOR_VERSION 0)
 set(OpenBLAS_MINOR_VERSION 3)
-set(OpenBLAS_PATCH_VERSION 30.dev)
+set(OpenBLAS_PATCH_VERSION 33.dev)
 
 set(OpenBLAS_VERSION "${OpenBLAS_MAJOR_VERSION}.${OpenBLAS_MINOR_VERSION}.${OpenBLAS_PATCH_VERSION}")
 
@@ -243,6 +243,30 @@ if (${DYNAMIC_ARCH})
   endforeach()
 endif ()
 
+# Work around Apple issue with "argument list too long" when linking.
+# Seen for DYNAMIC_ARCH when there are a _LOT_ of variants build, previously
+# mostly with older versions on POWERPC or Intel CPUs, but with newer ARM
+# CPUs and newer compilers this will also occur on ARM.
+#
+# This must happen before the add_library() calls, otherwise this will have
+# no effect.
+#
+# Unfortunately, while this workaround will work for shared libraries (with
+# either Ninja oder Unix Makefiles), but not for static libraries, as ar
+# does not accept response files. So for the case where we (also) build
+# static libraries we need an additional workaround, see below. (The
+# generation of the response files by CMake must still be enabled, so this
+# is required regardless.)
+if(APPLE)
+  set(CMAKE_C_USE_RESPONSE_FILE_FOR_OBJECTS ON)
+  set(CMAKE_C_USE_RESPONSE_FILE_FOR_LIBRARIES ON)
+  if(NOT NOFORTRAN)
+    set(CMAKE_Fortran_USE_RESPONSE_FILE_FOR_OBJECTS ON)
+    set(CMAKE_Fortran_USE_RESPONSE_FILE_FOR_LIBRARIES ON)
+  endif()
+  set(CMAKE_NINJA_FORCE_RESPONSE_FILE ON)
+endif()
+
 # add objects to the openblas lib
 if(NOT NO_LAPACK)
   add_library(LAPACK_OVERRIDES OBJECT ${LA_SOURCES})
@@ -308,20 +332,22 @@ if (USE_OPENMP)
   endif()
 endif()
 
-# Fix "Argument list too long" for macOS with POWERPC or Intel CPUs 
-if(APPLE AND (NOT CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64"))
-  # Use response files
-  set(CMAKE_C_USE_RESPONSE_FILE_FOR_OBJECTS 1)
+# Second part of "Argument list too long" fix when static libraries are
+# built. See above for details.
+if(APPLE AND BUILD_STATIC_LIBS)
   # Always build static library first
-  if(BUILD_STATIC_LIBS)
-    set(STATIC_PATH "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${OpenBLAS_LIBNAME}.a")
+  set(STATIC_PATH "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/lib${OpenBLAS_LIBNAME}.a")
+  # Handle differences in how many response files are generated and/or where
+  # they are stored for Ninja / Unix Makefiles.
+  if("${CMAKE_GENERATOR}" MATCHES "Ninja")
+    set(CREATE_STATIC_LIBRARY_COMMAND
+      "sh -c 'cat ${CMAKE_BINARY_DIR}/CMakeFiles/openblas_static.rsp | xargs -n 1024 ${CMAKE_AR} -ru ${STATIC_PATH} && exit 0' "
+      "sh -c '${CMAKE_AR} -rs ${STATIC_PATH} ${CMAKE_BINARY_DIR}/driver/others/CMakeFiles/driver_others.dir/xerbla.c.o && exit 0' ")
   else()
-    add_library(${OpenBLAS_LIBNAME}_static STATIC ${TARGET_OBJS} ${OpenBLAS_DEF_FILE})
-    set(STATIC_PATH "lib${OpenBLAS_LIBNAME}.a")
+    set(CREATE_STATIC_LIBRARY_COMMAND
+      "sh -c 'cat ${CMAKE_BINARY_DIR}/CMakeFiles/${OpenBLAS_LIBNAME}_static.dir/objects*.rsp | xargs -n 1024 ${CMAKE_AR} -ru ${STATIC_PATH} && exit 0' "
+      "sh -c '${CMAKE_AR} -rs ${STATIC_PATH} ${CMAKE_BINARY_DIR}/driver/others/CMakeFiles/driver_others.dir/xerbla.c.o && exit 0' ")
   endif()
-  set(CREATE_STATIC_LIBRARY_COMMAND
-    "sh -c 'cat ${CMAKE_BINARY_DIR}/CMakeFiles/${OpenBLAS_LIBNAME}_static.dir/objects*.rsp | xargs -n 1024 ${CMAKE_AR} -ru ${STATIC_PATH} && exit 0' "
-    "sh -c '${CMAKE_AR} -rs ${STATIC_PATH} ${CMAKE_BINARY_DIR}/driver/others/CMakeFiles/driver_others.dir/xerbla.c.o && exit 0' ")
   if(BUILD_SHARED_LIBS)
     add_dependencies(${OpenBLAS_LIBNAME}_shared ${OpenBLAS_LIBNAME}_static)
     set(SHARED_PATH "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libopenblas.${OpenBLAS_MAJOR_VERSION}.${OpenBLAS_MINOR_VERSION}.dylib")
@@ -332,7 +358,6 @@ if(APPLE AND (NOT CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64"))
     set(OMP_LIB "")
   endif()
   if(NOT NOFORTRAN)
-    set(CMAKE_Fortran_USE_RESPONSE_FILE_FOR_OBJECTS 1)
     set(CMAKE_Fortran_CREATE_STATIC_LIBRARY ${CREATE_STATIC_LIBRARY_COMMAND})
     if(BUILD_SHARED_LIBS)
       set(CMAKE_Fortran_CREATE_SHARED_LIBRARY
@@ -708,6 +733,39 @@ if(NOT NO_LAPACKE)
   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/lapack-netlib/LAPACKE/include/lapacke_mangling_with_flags.h.in "${CMAKE_BINARY_DIR}/lapacke_mangling.h"
   )
   install (FILES ${CMAKE_BINARY_DIR}/lapacke_mangling.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+  if (NOT (x${SYMBOLPREFIX}${SYMBOLSUFFIX} STREQUAL "x"))
+  message (STATUS "Generating lapacke.h in ${CMAKE_INSTALL_INCLUDEDIR}")
+  set(LAPACKE_H ${CMAKE_BINARY_DIR}/generated/lapacke.h)
+  file(READ ${CMAKE_CURRENT_SOURCE_DIR}/lapack-netlib/LAPACKE/include/lapacke.h LAPACKE_H_CONTENTS)
+  if (NOT ${SYMBOLPREFIX} STREQUAL "")
+	  string(REGEX REPLACE "(LAPACKE_*)" " ${SYMBOLPREFIX}\\1" LAPACKE_H_CONTENTS_NEW	"${LAPACKE_H_CONTENTS}")
+	  string(REPLACE "_ ${SYMBOLPREFIX}LAPACKE_H_"  "_LAPACKE_H_" LAPACKE_H_CONTENTS ${LAPACKE_H_CONTENTS_NEW})
+	  string(REPLACE "${SYMBOLPREFIX}LAPACKE_malloc"  "LAPACKE_malloc" LAPACKE_H_CONTENTS_NEW ${LAPACKE_H_CONTENTS})
+	  string(REPLACE "${SYMBOLPREFIX}LAPACKE_free"  "LAPACKE_free" LAPACKE_H_CONTENTS ${LAPACKE_H_CONTENTS_NEW})
+	  set(LAPACKE_H_CONTENTS_NEW ${LAPACKE_H_CONTENTS})
+  endif()
+  if (NOT ${SYMBOLSUFFIX} STREQUAL "")
+	  string(REGEX REPLACE "(${SYMBOLPREFIX}LAPACKE_[a-z1-9]*[^ (]*)" "\\1${SYMBOLSUFFIX}" LAPACKE_H_CONTENTS_NEW	"${LAPACKE_H_CONTENTS}")
+	  string(REPLACE "#define${SYMBOLSUFFIX}"  "#define" LAPACKE_H_CONTENTS ${LAPACKE_H_CONTENTS_NEW})
+	  string(REPLACE "LAPACKE_malloc${SYMBOLSUFFIX}"  "LAPACKE_malloc" LAPACKE_H_CONTENTS_NEW ${LAPACKE_H_CONTENTS})
+	  string(REPLACE "LAPACKE_free${SYMBOLSUFFIX}"  "LAPACKE_free" LAPACKE_H_CONTENTS ${LAPACKE_H_CONTENTS_NEW})
+	  set(LAPACKE_H_CONTENTS_NEW ${LAPACKE_H_CONTENTS})
+  endif()
+  file(WRITE ${LAPACKE_H} "${LAPACKE_H_CONTENTS_NEW}")
+  install (FILES ${LAPACKE_H} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+  message (STATUS "Generating lapack.h in ${CMAKE_INSTALL_INCLUDEDIR}")
+  set(LAPACK_H ${CMAKE_BINARY_DIR}/generated/lapack.h)
+  file(READ ${CMAKE_CURRENT_SOURCE_DIR}/lapack-netlib/LAPACKE/include/lapack.h LAPACK_H_CONTENTS)
+  if (NOT ${SYMBOLPREFIX} STREQUAL "")
+	  string(REGEX REPLACE "(LAPACK_[a-z1-9]*[ \(][.\)]*)" "${SYMBOLPREFIX}\\1" LAPACK_H_CONTENTS_NEW	"${LAPACK_H_CONTENTS}")
+	  set(LAPACK_H_CONTENTS ${LAPACK_H_CONTENTS_NEW})
+  endif()
+  if (NOT ${SYMBOLSUFFIX} STREQUAL "")
+	  string(REGEX REPLACE "(${SYMBOLPREFIX}LAPACK_[a-z1-9]*)([ \(].\)" "\\1${SYMBOLSUFFIX}\\2" LAPACK_H_CONTENTS_NEW	"${LAPACK_H_CONTENTS}")
+  endif()
+  file(WRITE ${LAPACK_H} "${LAPACK_H_CONTENTS_NEW}")
+  install (FILES ${LAPACK_H} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+endif()
 endif()
 
 # Install pkg-config files

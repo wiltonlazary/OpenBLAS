@@ -247,6 +247,11 @@ NO_PARALLEL_MAKE=0
 endif
 GETARCH_FLAGS	+= -DNO_PARALLEL_MAKE=$(NO_PARALLEL_MAKE)
 
+ifndef MAKE_NB_JOBS
+ifneq (,$(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS))))
+MAKE_NB_JOBS=-1
+endif
+endif
 ifdef MAKE_NB_JOBS
 GETARCH_FLAGS += -DMAKE_NB_JOBS=$(MAKE_NB_JOBS)
 endif
@@ -331,6 +336,7 @@ HAVE_SSE5=
 HAVE_AVX=
 HAVE_AVX2=
 HAVE_FMA3=
+HAVE_SME=
 include $(TOPDIR)/Makefile_kernel.conf
 endif
 
@@ -427,7 +433,7 @@ ifndef MACOSX_DEPLOYMENT_TARGET
 ifeq ($(ARCH), arm64)
 export MACOSX_DEPLOYMENT_TARGET=11.0
 export NO_SVE = 1
-export NO_SME = 1
+# export NO_SME = 1
 else
 export MACOSX_DEPLOYMENT_TARGET=10.8
 endif
@@ -721,6 +727,11 @@ DYNAMIC_CORE += A64FX
 endif
 ifneq ($(NO_SME), 1)
 DYNAMIC_CORE += ARMV9SME
+ifeq ($(OSNAME), Darwin)
+ifneq ($(C_COMPILER), GCC)
+DYNAMIC_CORE += VORTEXM4
+endif
+endif
 endif
 DYNAMIC_CORE += THUNDERX
 DYNAMIC_CORE += THUNDERX2T99
@@ -1896,6 +1907,7 @@ ifndef NO_MSA
   export HAVE_MSA
   export MSA_FLAGS
 endif
+export HAVE_SME
 export KERNELDIR
 export FUNCTION_PROFILE
 export TARGET_CORE

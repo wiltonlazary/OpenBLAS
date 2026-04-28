@@ -24,7 +24,7 @@ jobs:
         
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: Print system information
         run: |
@@ -52,7 +52,7 @@ jobs:
           fi
 
       - name: Compilation cache
-        uses: actions/cache@v3
+        uses: actions/cache@v5
         with:
           path: ~/.ccache
           # We include the commit sha in the cache key, as new cache entries are
@@ -99,6 +99,7 @@ jobs:
         run: |
           export CPPFLAGS="-I/opt/homebrew/opt/llvm/include"
           export CC="/opt/homebrew/opt/llvm/bin/clang"
+          export RANLIB=llvm-ranlib
           case "${{ matrix.build }}" in
             "make")
               make -j$(nproc) DYNAMIC_ARCH=1 USE_OPENMP=${{matrix.openmp}} INTERFACE64=${{matrix.ilp64}} FC="ccache ${{ matrix.fortran }}"

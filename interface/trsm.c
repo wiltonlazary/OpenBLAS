@@ -87,6 +87,10 @@
 #define SMP_FACTOR 128
 #endif
 
+#ifdef DYNAMIC_ARCH
+extern char* gotoblas_corename(void);                                
+#endif                                                               
+
 static int (*trsm[])(blas_arg_t *, BLASLONG *, BLASLONG *, FLOAT *, FLOAT *, BLASLONG) = {
 #ifndef TRMM
   TRSM_LNUU, TRSM_LNUN, TRSM_LNLU, TRSM_LNLN,
@@ -355,12 +359,17 @@ void CNAME(enum CBLAS_ORDER order,
     return;
   }
 
+  if (args.m == 0 || args.n == 0) return;
+
 #if !defined(COMPLEX) && !defined(DOUBLE) && !defined(BFLOAT16)  && !defined(HFLOAT16)
 #if defined(ARCH_ARM64) && (defined(USE_STRMM_KERNEL_DIRECT)||defined(DYNAMIC_ARCH))
 #if defined(DYNAMIC_ARCH)
- if (support_sme1())
+if (strcmp(gotoblas_corename(), "armv9sme") == 0
+#if defined(__clang__)
+ || strcmp(gotoblas_corename(), "vortexm4") == 0
 #endif
-  if (args.m == 0 || args.n == 0) return;
+)
+#endif
   if (order == CblasRowMajor && Diag == CblasNonUnit && Side == CblasLeft && m == lda && n == ldb) {
     if (Trans ==  CblasNoTrans) {
       (Uplo == CblasUpper ? STRMM_DIRECT_LNUN : STRMM_DIRECT_LNLN)(m, n, alpha, a, lda, b, ldb);
@@ -373,8 +382,6 @@ void CNAME(enum CBLAS_ORDER order,
 #endif
 
 #endif
-
-  if ((args.m == 0) || (args.n == 0)) return;
 
   IDEBUG_START;
 
